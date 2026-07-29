@@ -19,6 +19,10 @@ export function useLocalStorageState(key, initialValue) {
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     window.localStorage.setItem(key, JSON.stringify(value));
   }, [key, value]);
 

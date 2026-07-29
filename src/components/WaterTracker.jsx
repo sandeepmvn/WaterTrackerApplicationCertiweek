@@ -32,6 +32,7 @@ export default function WaterTracker() {
 
   const shownMilestonesRef = useRef(new Set());
   const previousStreakRef = useRef(streak);
+  const hasMountedRef = useRef(false);
 
   const progress = Math.min((oz / goalOz) * 100, 100);
   const goalMet = oz >= goalOz;
@@ -74,6 +75,12 @@ export default function WaterTracker() {
   }, [progress, pushToast]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      previousStreakRef.current = streak;
+      return;
+    }
+
     if (previousStreakRef.current !== streak && streak > previousStreakRef.current && streak > 0) {
       pushToast(`🔥 ${streak}-day streak and counting!`);
     }
