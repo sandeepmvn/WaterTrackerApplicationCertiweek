@@ -1,45 +1,93 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
+import AmountSlider from './AmountSlider';
+import BadgesPanel from './BadgesPanel';
+import ToastStack from './ToastStack';
+import WelcomeModal from './WelcomeModal';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useWaterData } from '../hooks/useWaterData';
+import { useToasts } from '../hooks/useToasts';
 
 const STEP_OZ = 8;
 const CUP_EMOJI = '💧';
-
-function calculateGoal(age) {
-  const a = Number(age);
-  if (!a || a < 1) return 64;
-  if (a <= 3)  return 32;
-  if (a <= 8)  return 40;
-  if (a <= 13) return 56;
-  if (a <= 18) return 72;
-  if (a <= 50) return 80;
-  if (a <= 65) return 72;
-  return 64;
-}
+const PROGRESS_MILESTONES = [25, 50, 75, 100];
 
 export default function WaterTracker() {
   const [isDark, toggleDark] = useDarkMode();
-  const [oz, setOz] = useState(0);
-  const [age, setAge] = useState('');
+  const {
+    userName,
+    setUserName,
+    age,
+    setAge,
+    oz,
+    goalOz,
+    addOz,
+    decrementOz,
+    resetOz,
+    streak,
+    badges,
+    justEarned,
+    clearJustEarned,
+  } = useWaterData();
+  const { toasts, pushToast } = useToasts();
 
-  const goalOz = calculateGoal(age);
+  const shownMilestonesRef = useRef(new Set());
+  const previousStreakRef = useRef(streak);
+
   const progress = Math.min((oz / goalOz) * 100, 100);
   const goalMet = oz >= goalOz;
   const cups = Math.floor(oz / STEP_OZ);
   const totalCups = Math.ceil(goalOz / STEP_OZ);
 
-  const increment = () => setOz((prev) => prev + STEP_OZ);
-  const decrement = () => setOz((prev) => Math.max(0, prev - STEP_OZ));
-  const reset = () => setOz(0);
+  useEffect(() => {
+    if (justEarned.length === 0) {
+      return;
+    }
+
+    justEarned.forEach((badge) => {
+      pushToast(`Badge unlocked: ${badge.icon} ${badge.label}`);
+    });
+    clearJustEarned();
+  }, [clearJustEarned, justEarned, pushToast]);
+
+  useEffect(() => {
+    const roundedProgress = Math.round(progress);
+
+    if (roundedProgress === 0) {
+      shownMilestonesRef.current = new Set();
+      return;
+    }
+
+    PROGRESS_MILESTONES.forEach((milestone) => {
+      if (
+        roundedProgress >= milestone &&
+        !shownMilestonesRef.current.has(milestone)
+      ) {
+        shownMilestonesRef.current.add(milestone);
+
+        if (milestone === 100) {
+          pushToast('🎉 Hydration goal complete for today!');
+        } else {
+          pushToast(`Nice work! You reached ${milestone}% of today’s goal.`);
+        }
+      }
+    });
+  }, [progress, pushToast]);
+
+  useEffect(() => {
+    if (previousStreakRef.current !== streak && streak > previousStreakRef.current && streak > 0) {
+      pushToast(`🔥 ${streak}-day streak and counting!`);
+    }
+
+    previousStreakRef.current = streak;
+  }, [pushToast, streak]);
 
   const handleAgeChange = (e) => {
     const val = e.target.value;
     if (val === '' || (Number(val) >= 1 && Number(val) <= 120)) {
       setAge(val);
-      setOz(0);
     }
   };
 
-  // Inline colors that adapt to dark mode
   const accentColor = goalMet
     ? (isDark ? '#4ade80' : '#16a34a')
     : (isDark ? '#60a5fa' : '#3b82f6');
@@ -54,6 +102,8 @@ export default function WaterTracker() {
         ? 'bg-gradient-to-br from-gray-950 via-gray-900 to-slate-900'
         : 'bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-100'
     }`}>
+      {!userName && <WelcomeModal isDark={isDark} onSubmit={setUserName} />}
+      <ToastStack toasts={toasts} />
       <div className={`rounded-3xl w-full max-w-sm text-center transition-all duration-300 ${
         isDark
           ? 'bg-gray-800 shadow-2xl shadow-black/60 ring-1 ring-white/10'
@@ -67,7 +117,7 @@ export default function WaterTracker() {
               Water Tracker
             </h1>
             <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-              Stay hydrated 💧
+              {userName ? `Hi ${userName}, stay hydrated 💧` : 'Stay hydrated 💧'}
             </p>
           </div>
           <button
@@ -131,9 +181,8 @@ export default function WaterTracker() {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="mb-5">
-          <div className={`flex justify-between text-xs mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          <div className={`mb-1.5 flex items-center justify-between gap-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
             <span>0 oz</span>
             <span className="font-medium" style={{ color: accentColor }}>{Math.round(progress)}%</span>
             <span>{goalOz} oz</span>
@@ -144,6 +193,17 @@ export default function WaterTracker() {
               style={{ width: `${progress}%`, backgroundColor: barColor }}
             />
           </div>
+          {streak > 0 && (
+            <div className="mt-3 flex justify-start">
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                isDark
+                  ? 'bg-orange-500/15 text-orange-300 ring-1 ring-orange-400/20'
+                  : 'bg-orange-50 text-orange-600 ring-1 ring-orange-100'
+              }`}>
+                🔥 {streak}-day streak
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Cup indicators */}
@@ -161,7 +221,7 @@ export default function WaterTracker() {
         {/* +/- Buttons */}
         <div className="flex gap-3 mb-3">
           <button
-            onClick={decrement}
+            onClick={() => decrementOz(STEP_OZ)}
             disabled={oz === 0}
             className={`flex-1 py-3 rounded-xl text-base font-semibold transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${
               isDark
@@ -172,7 +232,7 @@ export default function WaterTracker() {
             − 8 oz
           </button>
           <button
-            onClick={increment}
+            onClick={() => addOz(STEP_OZ)}
             className={`flex-1 py-3 rounded-xl text-base font-semibold text-white transition-all active:scale-95 ${
               isDark
                 ? 'bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/50'
@@ -183,8 +243,11 @@ export default function WaterTracker() {
           </button>
         </div>
 
+        <AmountSlider isDark={isDark} onAdd={addOz} />
+        <BadgesPanel earnedBadgeIds={badges} isDark={isDark} />
+
         <button
-          onClick={reset}
+          onClick={resetOz}
           className={`w-full py-2 rounded-xl text-sm font-medium transition-all ${
             isDark
               ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-700'
@@ -197,5 +260,3 @@ export default function WaterTracker() {
     </div>
   );
 }
-
-
