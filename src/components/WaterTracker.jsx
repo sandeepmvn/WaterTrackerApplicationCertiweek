@@ -81,7 +81,7 @@ export default function WaterTracker() {
       return;
     }
 
-    if (previousStreakRef.current !== streak && streak > previousStreakRef.current && streak > 0) {
+    if (previousStreakRef.current !== streak && streak > previousStreakRef.current) {
       pushToast(`🔥 ${streak}-day streak and counting!`);
     }
 
