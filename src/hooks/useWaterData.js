@@ -178,8 +178,8 @@ export function useWaterData() {
 
   const updateAge = (value) => {
     setAge(value);
-    updateTodayEntry(() => ({
-      oz: 0,
+    updateTodayEntry((currentEntry) => ({
+      oz: currentEntry.oz,
       goalOz: calculateGoal(value),
     }));
   };

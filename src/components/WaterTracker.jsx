@@ -51,16 +51,16 @@ export default function WaterTracker() {
   }, [clearJustEarned, justEarned, pushToast]);
 
   useEffect(() => {
-    const roundedProgress = Math.round(progress);
+    const progressPercentage = Math.round(progress);
 
-    if (roundedProgress === 0) {
+    if (progressPercentage === 0) {
       shownMilestonesRef.current = new Set();
       return;
     }
 
     PROGRESS_MILESTONES.forEach((milestone) => {
       if (
-        roundedProgress >= milestone &&
+        progressPercentage >= milestone &&
         !shownMilestonesRef.current.has(milestone)
       ) {
         shownMilestonesRef.current.add(milestone);
