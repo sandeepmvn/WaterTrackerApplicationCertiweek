@@ -3,7 +3,7 @@ import { useLocalStorageState } from './useLocalStorageState';
 
 const STORAGE_PREFIX = 'waterTracker.';
 const GALLON_OZ = 128;
-const MAX_STREAK_HISTORY_DAYS = 3660;
+const MAX_STREAK_CHECK_DAYS = 3660;
 
 export const BADGE_DEFINITIONS = [
   {
@@ -178,8 +178,8 @@ export function useWaterData() {
 
   const updateAge = (value) => {
     setAge(value);
-    updateTodayEntry((currentEntry) => ({
-      oz: currentEntry.oz,
+    updateTodayEntry(() => ({
+      oz: 0,
       goalOz: calculateGoal(value),
     }));
   };
@@ -195,7 +195,7 @@ export function useWaterData() {
       count += 1;
     }
 
-    while (daysChecked < MAX_STREAK_HISTORY_DAYS) {
+    while (daysChecked < MAX_STREAK_CHECK_DAYS) {
       const entry = normalizedHistory[cursorKey];
       if (!entry || entry.oz < entry.goalOz) {
         break;
